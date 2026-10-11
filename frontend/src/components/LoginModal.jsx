@@ -13,12 +13,25 @@ export default function LoginModal({ onLoginSuccess }) {
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // 1. Handle Registration (Saves to MySQL via Spring Boot)
+  // Helper check for Vercel live deployment environment
+  const isVercelEnvironment = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
+
+  // 1. Handle Registration
   const handleRegister = async (e) => {
     e.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
     setLoading(true);
+
+    if (isVercelEnvironment) {
+      setTimeout(() => {
+        setLoading(false);
+        setSuccessMessage('Vercel Demo Mode: Agent registered! You can now sign in.');
+        setIsRegistering(false);
+        setPassword('');
+      }, 500);
+      return;
+    }
 
     try {
       await registerUserApi({ username, password, email, role });
@@ -32,17 +45,29 @@ export default function LoginModal({ onLoginSuccess }) {
     }
   };
 
-  // 2. Handle Login (Verifies against MySQL)
+  // 2. Handle Login
   const handleLogin = async (e) => {
     e.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
     setLoading(true);
 
+    if (isVercelEnvironment) {
+      // Bypasses local backend network block on Vercel live demo
+      localStorage.setItem('username', username || 'sunnychanu');
+      localStorage.setItem('user_clearance_role', role);
+
+      setTimeout(() => {
+        setLoading(false);
+        onLoginSuccess();
+      }, 600);
+      return;
+    }
+
+    // Standard Real Spring Boot + MySQL Verification for Local Development
     try {
       const response = await loginUserApi(username, password);
       
-      // Store session context
       localStorage.setItem('username', response.username || username);
       localStorage.setItem('user_clearance_role', response.role || role);
 
@@ -102,7 +127,7 @@ export default function LoginModal({ onLoginSuccess }) {
           </div>
           <h1 style={{ fontSize: '20px', fontWeight: '800', margin: '0 0 4px 0' }}>EnterpriseSync</h1>
           <p style={{ fontSize: '12px', color: '#94a3b8', margin: 0 }}>
-            {isRegistering ? 'Register New Agent (MySQL Persisted)' : 'Security Telemetry Verification'}
+            {isRegistering ? 'Register New Agent' : 'Security Telemetry Verification'}
           </p>
         </div>
 
@@ -177,7 +202,7 @@ export default function LoginModal({ onLoginSuccess }) {
 
           <button type="submit" style={styles.primaryBtn}>
             {isRegistering ? (
-              <><UserPlus size={16} /> {loading ? 'SAVING TO MYSQL...' : 'Register Agent'}</>
+              <><UserPlus size={16} /> {loading ? 'SAVING AGENT...' : 'Register Agent'}</>
             ) : (
               <><LogIn size={16} /> {loading ? 'VERIFYING...' : 'Sign In'}</>
             )}
